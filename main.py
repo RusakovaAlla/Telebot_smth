@@ -4,23 +4,22 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.dispatcher.filters import Text
 from config_reader import config
 from random import choice
+from weather_bot_api import useful_weather_info
 
 logging.basicConfig(level=logging.INFO)  # Включаем логирование, чтобы не пропустить важные сообщения
 bot = Bot(token=config.bot_token.get_secret_value())  # Объект бота
 dp = Dispatcher(bot)  # Диспетчер
 
 
-@dp.message_handler(commands=['start', 'help'])
+@dp.message_handler(commands=['start'])
 async def send_welcome(message: types.Message):
-    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
-    buttons = ["Да", "Нет"]
-    keyboard.add(*buttons)
-    await message.reply("Привет!\n Теоретически вы тут можете складывать комплексные числа и вносить изменения "
-                        "в телефонный справочник, но это пока в разработке, а пока..."
-                        " сыграем в крестики-нолики?\n", reply_markup=keyboard)
+    await message.reply('Привет!\n'
+                        'Что новый хозяин надо?\n'
+                        '/play - сыграем в крестики-нолики?\n'
+                        '/weather *город*- посморим погодку где-нибудь')
 
 
-@dp.message_handler(lambda message: message.text == "Да")
+@dp.message_handler(commands=['play'])
 async def with_yes(message: types.Message):
     global button
     keyboard = types.InlineKeyboardMarkup(row_width=3)
@@ -60,7 +59,6 @@ async def with_yes(message: types.Message):
             else:
                 continue
         keyboard.add(*button)
-        # keyboard.add(*new_keyboard(callback_place, "Х", "forbidden"))
         await message.answer(f"Первым хожу я!", reply_markup=keyboard)
 
 
@@ -126,6 +124,9 @@ async def no_mark(callback_answ: types.CallbackQuery):
 @dp.message_handler(lambda message: message.text == "Нет")
 async def with_no(message: types.Message):
     await message.answer("В другой раз...", reply_markup=types.ReplyKeyboardRemove())
+    await message.answer('Просто напомню:\n'
+                         '/play - сыграем еще раз в крестики-нолики?\n'
+                         '/weather *город*- посморим погодку где-нибудь')
 
 
 def check4win(array):  # модернизированная функция из задачи
@@ -144,6 +145,13 @@ def check4win(array):  # модернизированная функция из 
                 return True
     else:
         return False
+
+
+@dp.message_handler(commands=['weather'])
+async def weather_city(message: types.Message):
+    city = message.text.split(" ")[1]
+    resp = useful_weather_info(city)
+    await message.reply(resp)
 
 
 # Запуск процесса поллинга новых апдейтов
